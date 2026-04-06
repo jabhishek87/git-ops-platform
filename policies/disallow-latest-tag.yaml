@@ -1,0 +1,61 @@
+# Block images with no tag or :latest
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow Latest Tag
+    policies.kyverno.io/description: >-
+      Images must use a specific tag, not :latest or no tag.
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: require-image-tag
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - argocd
+                - kyverno
+                - cert-manager
+                - external-secrets
+                - monitoring
+                - vault
+      validate:
+        message: "An image tag is required. ':latest' is not allowed."
+        pattern:
+          spec:
+            containers:
+              - image: "?*:?*"
+    - name: deny-latest-tag
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - argocd
+                - kyverno
+                - cert-manager
+                - external-secrets
+                - monitoring
+                - vault
+      validate:
+        message: "Using ':latest' tag is not allowed."
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.spec.containers[].image }}"
+                operator: AnyIn
+                value: "*:latest"

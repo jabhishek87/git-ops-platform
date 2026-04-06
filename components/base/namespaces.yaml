@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: novadeploy
+  labels:
+    app.kubernetes.io/part-of: novadeploy
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vault
+  labels:
+    app.kubernetes.io/part-of: novadeploy
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: novadeploy-api
+  namespace: novadeploy
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: novadeploy-worker
+  namespace: novadeploy

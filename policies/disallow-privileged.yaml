@@ -1,0 +1,61 @@
+# Block containers running as root
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged
+  annotations:
+    policies.kyverno.io/title: Disallow Privileged Containers
+    policies.kyverno.io/description: >-
+      Containers must not run as root or with privilege escalation.
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: deny-privileged
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - argocd
+                - kyverno
+                - cert-manager
+                - external-secrets
+                - monitoring
+                - vault
+      validate:
+        message: "Privileged containers are not allowed. Set securityContext.privileged to false."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  privileged: "false|!true"
+                  allowPrivilegeEscalation: "false|!true"
+    - name: deny-run-as-root
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - argocd
+                - kyverno
+                - cert-manager
+                - external-secrets
+                - monitoring
+                - vault
+      validate:
+        message: "Running as root is not allowed. Set runAsNonRoot to true."
+        pattern:
+          spec:
+            =(securityContext):
+              =(runAsNonRoot): true

@@ -1,0 +1,51 @@
+# Block pods using hostNetwork or hostPID
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-host-namespaces
+  annotations:
+    policies.kyverno.io/title: Disallow Host Namespaces
+    policies.kyverno.io/description: >-
+      Pods must not use hostNetwork or hostPID.
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: deny-host-network
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - argocd
+                - kyverno
+                - monitoring
+      validate:
+        message: "hostNetwork is not allowed."
+        pattern:
+          spec:
+            =(hostNetwork): false
+    - name: deny-host-pid
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - argocd
+                - kyverno
+                - monitoring
+      validate:
+        message: "hostPID is not allowed."
+        pattern:
+          spec:
+            =(hostPID): false
