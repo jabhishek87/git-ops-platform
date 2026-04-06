@@ -1,0 +1,44 @@
+name: Validate Manifests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          # yamllint
+          pip install yamllint
+
+          # kubeconform
+          curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+          # kyverno CLI
+          curl -sL https://github.com/kyverno/kyverno/releases/download/v1.11.4/kyverno-cli_v1.11.4_linux_x86_64.tar.gz | tar xz
+          sudo mv kyverno /usr/local/bin/
+
+      - name: Run validation
+        run: ./ci/validate.sh
+
+      - name: Kyverno policy test (offline)
+        run: |
+          # Test policies against sample manifests
+          for f in components/api-service/base/deployment.yaml components/worker/base/deployment.yaml; do
+            echo "--- Testing $f against policies ---"
+            kyverno apply policies/ --resource "$f" || true
+          done
+
+      - name: Check for secrets in diff
+        run: |
+          if git diff --cached --diff-filter=ACM -- '*.yaml' '*.yml' | grep -iE '(password|secret_key|api_key|token)\s*[:=]\s*["\x27][^{]'; then
+            echo "::error::Possible secret detected in commit"
+            exit 1
+          fi

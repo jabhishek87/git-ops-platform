@@ -1,0 +1,23 @@
+# Sync-Order 008: Database (PostgreSQL) — needs namespace, secrets synced
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: database
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jabhishek87/git-ops-platform.git
+    targetRevision: main
+    path: components/database/base
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: novadeploy
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
