@@ -1,0 +1,104 @@
+# Grafana dashboard for ArgoCD platform health
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  argocd-platform.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "title": "Application Sync Status",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "count(argocd_app_info{sync_status=\"Synced\"})",
+              "legendFormat": "Synced"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }] } }
+          }
+        },
+        {
+          "title": "Applications OutOfSync",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "targets": [
+            {
+              "expr": "count(argocd_app_info{sync_status=\"OutOfSync\"}) or vector(0)",
+              "legendFormat": "OutOfSync"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }
+          }
+        },
+        {
+          "title": "Application Health Status",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "count(argocd_app_info{health_status=\"Healthy\"})",
+              "legendFormat": "Healthy"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }] } }
+          }
+        },
+        {
+          "title": "Degraded Applications",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "targets": [
+            {
+              "expr": "count(argocd_app_info{health_status=\"Degraded\"}) or vector(0)",
+              "legendFormat": "Degraded"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }
+          }
+        },
+        {
+          "title": "Sync Operations (last 1h)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "targets": [
+            {
+              "expr": "sum(increase(argocd_app_sync_total[5m])) by (phase)",
+              "legendFormat": "{{ phase }}"
+            }
+          ]
+        },
+        {
+          "title": "App Health Over Time",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "targets": [
+            {
+              "expr": "count(argocd_app_info) by (health_status)",
+              "legendFormat": "{{ health_status }}"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["argocd", "platform"],
+      "templating": { "list": [] },
+      "time": { "from": "now-1h", "to": "now" },
+      "title": "NovaDeploy Platform Health",
+      "uid": "novadeploy-platform"
+    }

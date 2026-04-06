@@ -1,0 +1,83 @@
+# Seeds Vault with per-service credentials for all environments
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-seed
+  namespace: vault
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app: vault-seed
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 1000
+      containers:
+        - name: seed
+          image: hashicorp/vault:1.15.6
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              export VAULT_ADDR=http://vault.vault.svc:8200
+              export VAULT_TOKEN=root
+
+              # Wait for Vault
+              until vault status 2>/dev/null; do
+                echo "Waiting for Vault..."
+                sleep 2
+              done
+
+              # Enable KV v2 if not already
+              vault secrets enable -path=secret -version=2 kv 2>/dev/null || true
+
+              # Seed per-service, per-env credentials
+              for ENV in dev staging prod; do
+                vault kv put "secret/${ENV}/api-service/db" \
+                  username="api_${ENV}" \
+                  password="api-db-pass-${ENV}" \
+                  host="postgresql.novadeploy.svc" \
+                  port="5432" \
+                  database="novadeploy_${ENV}"
+
+                vault kv put "secret/${ENV}/api-service/redis" \
+                  host="redis.novadeploy.svc" \
+                  port="6379" \
+                  password="api-redis-pass-${ENV}"
+
+                vault kv put "secret/${ENV}/worker/db" \
+                  username="worker_${ENV}" \
+                  password="worker-db-pass-${ENV}" \
+                  host="postgresql.novadeploy.svc" \
+                  port="5432" \
+                  database="novadeploy_${ENV}"
+
+                vault kv put "secret/${ENV}/worker/redis" \
+                  host="redis.novadeploy.svc" \
+                  port="6379" \
+                  password="worker-redis-pass-${ENV}"
+
+                vault kv put "secret/${ENV}/database/credentials" \
+                  postgres-password="pgadmin-pass-${ENV}" \
+                  replication-password="repl-pass-${ENV}"
+              done
+
+              echo "Vault seeded successfully."
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
