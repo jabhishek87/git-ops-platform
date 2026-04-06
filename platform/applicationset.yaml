@@ -1,0 +1,56 @@
+# Generates per-environment ArgoCD Applications for app workloads
+# dev: auto-sync, staging: auto-sync no prune, prod: manual sync
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: novadeploy-apps
+  namespace: argocd
+spec:
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - env: dev
+                  namespace: novadeploy-dev
+                  autoSync: "true"
+                  prune: "true"
+                  selfHeal: "true"
+                - env: staging
+                  namespace: novadeploy-staging
+                  autoSync: "true"
+                  prune: "false"
+                  selfHeal: "true"
+                - env: prod
+                  namespace: novadeploy-prod
+                  autoSync: "false"
+                  prune: "false"
+                  selfHeal: "true"
+          - list:
+              elements:
+                - app: api-service
+                  wave: "6"
+                - app: worker
+                  wave: "6"
+                - app: database
+                  wave: "5"
+                - app: redis
+                  wave: "5"
+  template:
+    metadata:
+      name: "{{app}}-{{env}}"
+      namespace: argocd
+      annotations:
+        argocd.argoproj.io/sync-wave: "{{wave}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/jabhishek87/git-ops-platform.git
+        targetRevision: main
+        path: "components/{{app}}/overlays/{{env}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{namespace}}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
