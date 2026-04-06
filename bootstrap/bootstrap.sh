@@ -43,9 +43,13 @@ info "Waiting for ArgoCD server..."
 kubectl wait --for=condition=Available deployment/argocd-server \
   -n "${ARGOCD_NS}" --timeout=300s
 
+# --- Apply App of Apps ---
+info "Applying App of Apps..."
+kubectl apply -f "${ROOT_DIR}/platform/app-of-apps.yaml"
+
 # --- Print access info ---
 ARGOCD_PASS=$(kubectl -n "${ARGOCD_NS}" get secret argocd-initial-admin-secret \
-  -o jsonpath="{.data.password}" 2>/dev/null | base64 -d 2>/dev/null || echo "unknown")
+  -o jsonpath="{.data.password}" 2>/dev/null | base64 -d 2>/dev/null || echo "admin")
 
 echo ""
 info "========================================="

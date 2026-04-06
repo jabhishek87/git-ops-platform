@@ -5,6 +5,9 @@ server:
 configs:
   params:
     server.insecure: true
+    timeout.reconciliation: 300s
+  secret:
+    argocdServerAdminPassword: "$2b$10$FI.pT3YdZBKnSlL2vzPRHe59en9y/a4f/at35xPrSH6i0LZmDqBES"
   cm:
     resource.customizations.health.argoproj.io_Application: |
       hs = {}
